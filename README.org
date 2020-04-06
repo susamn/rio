@@ -1,0 +1,3 @@
+* Introduction
+Rio is a lightweight job scheduler and job chaining library. Its mainly build for Golang web apps, but it can be very
+easily mold to serve any application needing job scheduling.
