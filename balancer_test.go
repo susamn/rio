@@ -8,6 +8,76 @@ import (
 	"time"
 )
 
+func BenchmarkBalancerSingleTask(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		b := GetBalancer(1)
+
+		var tasks = make([]*FutureTask, 1)
+		tasks[0] = &FutureTask{Callback: Task3, Timeout: time.Duration(1) * time.Second, RetryCount: 0}
+
+		completeChannel := make(chan bool)
+
+		ctx := context.Background()
+
+		request := &Request{
+			Tasks:            tasks,
+			Bridges:          nil,
+			Responses:        nil,
+			CompletedChannel: completeChannel,
+			Ctx:              ctx,
+		}
+
+		b.PostJob(request)
+
+		<-request.CompletedChannel
+
+		fmt.Println(request.Responses[0])
+
+	}
+}
+
+func BenchmarkMultipleChainedTask(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		b := GetBalancer(10)
+
+		var tasks = make([]*FutureTask, 4)
+		tasks[0] = &FutureTask{Callback: Task1, Timeout: time.Duration(100) * time.Second, RetryCount: 2}
+		tasks[1] = &FutureTask{Callback: Task2, Timeout: time.Duration(100) * time.Second, RetryCount: 0}
+		tasks[2] = &FutureTask{Callback: Task3, Timeout: time.Duration(100) * time.Second, RetryCount: 1}
+		tasks[3] = &FutureTask{Callback: Task4, Timeout: time.Duration(100) * time.Second}
+
+		var bridges = make([]Bridge, 3)
+		bridges[0] = Bridge1
+		bridges[1] = Bridge2
+		bridges[2] = Bridge3
+
+		completeChannel := make(chan bool)
+
+		ctx := context.Background()
+
+		request := &Request{
+			Tasks:            tasks,
+			Bridges:          bridges,
+			Responses:        nil,
+			CompletedChannel: completeChannel,
+			Ctx:              ctx,
+		}
+
+		b.PostJob(request)
+
+		<-request.CompletedChannel
+
+		fmt.Println(request.Responses[0], request.Responses[1], request.Responses[2], request.Responses[3])
+
+		if request.Responses[0].Data.(string) != "Response 1" ||
+			request.Responses[1].Data.(string) != "Response 2" ||
+			request.Responses[2].Data.(string) != "Response 3" ||
+			request.Responses[3].Data.(string) != "Response 4" {
+
+		}
+	}
+}
+
 func TestWithSingleTaskWithRetry(t *testing.T) {
 	b := GetBalancer(1)
 
