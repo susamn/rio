@@ -13,6 +13,7 @@ type FutureTaskResponse struct {
 	Error        error
 }
 
+var EMPTY_ARG_PLACEHOLDER = ""
 var EMPTY_CALLBACK_RESPONSE = &FutureTaskResponse{
 	ResponseCode: -1,
 	Data:         nil,
