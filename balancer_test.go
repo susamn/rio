@@ -9,8 +9,9 @@ import (
 )
 
 func BenchmarkBalancerSingleTask(b *testing.B) {
+
+	balancer := GetBalancer(1)
 	for i := 0; i < b.N; i++ {
-		b := GetBalancer(1)
 
 		var tasks = make([]*FutureTask, 1)
 		tasks[0] = &FutureTask{Callback: Task3, Timeout: time.Duration(1) * time.Second, RetryCount: 0}
@@ -27,7 +28,7 @@ func BenchmarkBalancerSingleTask(b *testing.B) {
 			Ctx:              ctx,
 		}
 
-		b.PostJob(request)
+		balancer.PostJob(request)
 
 		<-request.CompletedChannel
 
@@ -37,8 +38,8 @@ func BenchmarkBalancerSingleTask(b *testing.B) {
 }
 
 func BenchmarkMultipleChainedTask(b *testing.B) {
+	balancer := GetBalancer(10)
 	for i := 0; i < b.N; i++ {
-		b := GetBalancer(10)
 
 		var tasks = make([]*FutureTask, 4)
 		tasks[0] = &FutureTask{Callback: Task1, Timeout: time.Duration(100) * time.Second, RetryCount: 2}
@@ -63,7 +64,7 @@ func BenchmarkMultipleChainedTask(b *testing.B) {
 			Ctx:              ctx,
 		}
 
-		b.PostJob(request)
+		balancer.PostJob(request)
 
 		<-request.CompletedChannel
 
