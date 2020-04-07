@@ -7,25 +7,35 @@ import (
 	"time"
 )
 
+// This is a response which will be available in future from a FutureTask
 type FutureTaskResponse struct {
 	ResponseCode int
 	Data         interface{}
 	Error        error
 }
 
+// During callback chaining, ue this to setup the callbacks, see the example
 var EMPTY_ARG_PLACEHOLDER = ""
+
+// Use this to send an empty response when some callback is failed
 var EMPTY_CALLBACK_RESPONSE = &FutureTaskResponse{
 	ResponseCode: -1,
 	Data:         nil,
 	Error:        errors.New("The callback didn't run due to argument unavailability"),
 }
 
+// This is task which will be executed in future
 type FutureTask struct {
 	Callback   func(BridgeConnection) *FutureTaskResponse
 	Timeout    time.Duration
 	RetryCount int
 }
+
+// Its how two callbacks communicate with each other, this is a function which knows how to convert
+// one callback response to the next
 type Bridge func(interface{}) BridgeConnection
+
+// Its the data that is filled with the bridge data
 type BridgeConnection chan interface{}
 
 // Request is the one that is sent to the *balancer* to be used to call concurrently
