@@ -3,6 +3,7 @@ package rio
 import (
 	"container/heap"
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -15,14 +16,14 @@ type Balancer struct {
 	done       chan *Worker
 }
 
-func GetBalancer(workerCount int) *Balancer {
+func GetBalancer(workerCount, taskPerWorker int) *Balancer {
 	balancerLock.Do(func() {
 		b := &Balancer{done: make(chan *Worker), jobChannel: make(chan *Request)}
 		countOfWorkers := workerCount
 		p := make([]*Worker, countOfWorkers)
 		for i := 0; i < countOfWorkers; i++ {
 			w := &Worker{
-				requests: make(chan *Request),
+				requests: make(chan *Request, taskPerWorker),
 				pending:  0,
 				index:    i,
 				Name:     fmt.Sprintf("Worker-%d", i),
@@ -56,11 +57,11 @@ func (b *Balancer) balance() {
 
 func (b *Balancer) dispatch(req *Request) {
 	w := heap.Pop(&b.pool).(*Worker)
-	fmt.Println(fmt.Sprintf("Dispatching request to [%s]", w.Name))
+	log.Println(fmt.Sprintf("Dispatching request to [%s]", w.Name))
 	w.DoWork(req)
 	w.pending++
 	heap.Push(&b.pool, w)
-	fmt.Println()
+	log.Println()
 }
 
 func (b *Balancer) completed(w *Worker) {

@@ -33,7 +33,7 @@ jobs:
     - name: Build
       run: go build -v .
 
-    - name: Test
+    - name: Test & Coverage Report
       run: go test -race -coverprofile=coverage.txt -covermode=atomic
 
     - name: Codecov

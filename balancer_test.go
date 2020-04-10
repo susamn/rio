@@ -10,7 +10,7 @@ import (
 
 func BenchmarkBalancerSingleTask(b *testing.B) {
 
-	balancer := GetBalancer(1)
+	balancer := GetBalancer(1, 1)
 	for i := 0; i < b.N; i++ {
 
 		var tasks = make([]*FutureTask, 1)
@@ -38,7 +38,7 @@ func BenchmarkBalancerSingleTask(b *testing.B) {
 }
 
 func BenchmarkMultipleChainedTask(b *testing.B) {
-	balancer := GetBalancer(10)
+	balancer := GetBalancer(10, 2)
 	for i := 0; i < b.N; i++ {
 
 		var tasks = make([]*FutureTask, 4)
@@ -80,7 +80,7 @@ func BenchmarkMultipleChainedTask(b *testing.B) {
 }
 
 func TestWithSingleTaskWithRetry(t *testing.T) {
-	b := GetBalancer(1)
+	b := GetBalancer(1, 1)
 
 	var tasks = make([]*FutureTask, 1)
 	tasks[0] = &FutureTask{Callback: Task1, Timeout: time.Duration(100) * time.Second, RetryCount: 2}
@@ -110,7 +110,7 @@ func TestWithSingleTaskWithRetry(t *testing.T) {
 
 func TestWithSingleTaskWithTimeout(t *testing.T) {
 
-	b := GetBalancer(1)
+	b := GetBalancer(1, 1)
 
 	var tasks = make([]*FutureTask, 1)
 	tasks[0] = &FutureTask{Callback: Task7, Timeout: time.Duration(2) * time.Second, RetryCount: 2}
@@ -140,7 +140,7 @@ func TestWithSingleTaskWithTimeout(t *testing.T) {
 }
 
 func TestWithSingleTaskWithContextCancel(t *testing.T) {
-	b := GetBalancer(1)
+	b := GetBalancer(1, 1)
 
 	var tasks = make([]*FutureTask, 1)
 	tasks[0] = &FutureTask{Callback: Task7, Timeout: time.Duration(20) * time.Second, RetryCount: 2}
@@ -176,7 +176,7 @@ func TestWithSingleTaskWithContextCancel(t *testing.T) {
 
 func TestWithMultipleChainedTasks(t *testing.T) {
 
-	b := GetBalancer(10)
+	b := GetBalancer(10, 2)
 
 	var tasks = make([]*FutureTask, 4)
 	tasks[0] = &FutureTask{Callback: Task1, Timeout: time.Duration(100) * time.Second, RetryCount: 2}
@@ -219,7 +219,7 @@ func TestWithMultipleChainedTasks(t *testing.T) {
 
 func TestWithMultipleChainedTasksWithThirdTaskTimedOut(t *testing.T) {
 
-	b := GetBalancer(10)
+	b := GetBalancer(10, 2)
 
 	var tasks = make([]*FutureTask, 4)
 	tasks[0] = &FutureTask{Callback: Task1, Timeout: time.Duration(100) * time.Second, RetryCount: 2}
@@ -259,7 +259,7 @@ func TestWithMultipleChainedTasksWithThirdTaskTimedOut(t *testing.T) {
 }
 
 func TestWithMultipleChainedTaskAndBridgeData(t *testing.T) {
-	b := GetBalancer(1)
+	b := GetBalancer(1, 1)
 
 	var tasks = make([]*FutureTask, 3)
 	tasks[0] = &FutureTask{Callback: Task1, Timeout: time.Duration(100) * time.Second, RetryCount: 2}
@@ -298,8 +298,54 @@ func TestWithMultipleChainedTaskAndBridgeData(t *testing.T) {
 
 }
 
+func TestWithMultipleChainedTaskAndBridgeDataFromDifferentGoroutines(t *testing.T) {
+	b := GetBalancer(100, 100)
+
+	for i := 0; i < 100; i++ {
+		go func() {
+			for j := 0; j < 100; j++ {
+				var tasks = make([]*FutureTask, 3)
+				tasks[0] = &FutureTask{Callback: Task1, Timeout: time.Duration(100) * time.Second, RetryCount: 2}
+				tasks[1] = &FutureTask{Callback: Task5, Timeout: time.Duration(100) * time.Second, RetryCount: 0}
+				tasks[2] = &FutureTask{Callback: Task6, Timeout: time.Duration(100) * time.Second, RetryCount: 0}
+
+				var bridges = make([]Bridge, 2)
+				bridges[0] = Bridge4
+				bridges[1] = Bridge5
+
+				completeChannel := make(chan bool)
+
+				ctx := context.Background()
+
+				request := &Request{
+					Tasks:            tasks,
+					Bridges:          bridges,
+					Responses:        nil,
+					CompletedChannel: completeChannel,
+					Ctx:              ctx,
+				}
+
+				b.PostJob(request)
+
+				<-request.CompletedChannel
+
+				r1, _ := request.GetResponse(0)
+				r2, _ := request.GetResponse(1)
+				r3, _ := request.GetResponse(2)
+
+				if r1.Data.(string) != "Response 1" ||
+					len(r2.Data.([]interface{})) != 3 ||
+					len(r3.Data.([]interface{})) != 2 {
+					t.Fail()
+				}
+			}
+		}()
+	}
+
+}
+
 func TestWithMultipleChainedTaskAndBridgeDataSecondCallFailed(t *testing.T) {
-	b := GetBalancer(1)
+	b := GetBalancer(1, 1)
 
 	var tasks = make([]*FutureTask, 4)
 	tasks[0] = &FutureTask{Callback: Task1, Timeout: time.Duration(100) * time.Second, RetryCount: 2}
