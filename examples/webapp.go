@@ -23,8 +23,8 @@ func backEndCall2(name, locationId string) (streetAddress string) {
 	return "Route 66"
 }
 
-func GetNameById(id string) func(rio.BridgeConnection) *rio.FutureTaskResponse {
-	return func(bconn rio.BridgeConnection) *rio.FutureTaskResponse {
+func GetNameById(id string) func(*rio.BridgeConnection) *rio.FutureTaskResponse {
+	return func(bconn *rio.BridgeConnection) *rio.FutureTaskResponse {
 		response := backEndCall1(id)
 		return &rio.FutureTaskResponse{
 			Data:         response,
@@ -34,12 +34,12 @@ func GetNameById(id string) func(rio.BridgeConnection) *rio.FutureTaskResponse {
 	}
 }
 
-func GetStreetAddressByNameAndLocationId(name, locationId string) func(rio.BridgeConnection) *rio.FutureTaskResponse {
-	return func(bconn rio.BridgeConnection) *rio.FutureTaskResponse {
+func GetStreetAddressByNameAndLocationId(name, locationId string) func(*rio.BridgeConnection) *rio.FutureTaskResponse {
+	return func(bconn *rio.BridgeConnection) *rio.FutureTaskResponse {
 		var innerName string
 
-		if bconn != nil && len(bconn) > 0 {
-			innerName = (<-bconn).(string)
+		if bconn != nil {
+			innerName = bconn.Data[0].(string)
 		} else {
 			innerName = name
 		}
@@ -58,11 +58,14 @@ func GetStreetAddressByNameAndLocationId(name, locationId string) func(rio.Bridg
 }
 
 // Bridges
-func Call1ToCall2(response interface{}) rio.BridgeConnection {
-	bridge := make(chan interface{}, 1)
+func Call1ToCall2(response interface{}) *rio.BridgeConnection {
+	bridge := make([]interface{}, 1)
 	typedResponse := response.(string)
-	bridge <- typedResponse
-	return bridge
+	bridge[0] = typedResponse
+	return &rio.BridgeConnection{
+		Data:  bridge,
+		Error: nil,
+	}
 }
 
 func SampleHandler(w http.ResponseWriter, r *http.Request) {
