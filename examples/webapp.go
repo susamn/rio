@@ -70,7 +70,7 @@ func Call1ToCall2(response interface{}) *rio.BridgeConnection {
 
 func SampleHandler(w http.ResponseWriter, r *http.Request) {
 	// Create the load balancer, this should be created only once.
-	balancer := rio.GetBalancer(10) // 10 threads
+	balancer := rio.GetBalancer(10, 2) // 10 threads
 
 	// Setup the callbacks
 	callback1 := GetNameById("Some Name")
