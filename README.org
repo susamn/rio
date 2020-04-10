@@ -1,4 +1,7 @@
 * Introduction 
+
+  #+ATTR_HTML: title="Codacy Badge"
+  [[https://app.codacy.com/manual/susamn/rio?utm_source=github.com&utm_medium=referral&utm_content=susamn/rio&utm_campaign=Badge_Grade_Dashboard][file:https://api.codacy.com/project/badge/Grade/d833f224d9974475a011cb7191cd19e4]]
 [[https://github.com/susamn/rio/workflows/Go/badge.svg]] [[https://codecov.io/gh/susamn/rio/branch/master/graph/badge.svg]]
 ** What is RIO?
 Rio is a lightweight job scheduler and job chaining library. Its mainly build for Golang web apps, but it can be very
