@@ -298,34 +298,97 @@ func TestWithMultipleChainedTaskAndBridgeData(t *testing.T) {
 
 }
 
-func Bridge1(interface{}) BridgeConnection {
-	return make(chan interface{})
+func TestWithMultipleChainedTaskAndBridgeDataSecondCallFailed(t *testing.T) {
+	b := GetBalancer(1)
+
+	var tasks = make([]*FutureTask, 4)
+	tasks[0] = &FutureTask{Callback: Task1, Timeout: time.Duration(100) * time.Second, RetryCount: 2}
+	tasks[1] = &FutureTask{Callback: Task5, Timeout: time.Duration(100) * time.Second, RetryCount: 0}
+	tasks[2] = &FutureTask{Callback: Task6, Timeout: time.Duration(100) * time.Second, RetryCount: 0}
+	tasks[3] = &FutureTask{Callback: Task7, Timeout: time.Duration(100) * time.Second, RetryCount: 0}
+
+	var bridges = make([]Bridge, 3)
+	bridges[0] = Bridge6
+	bridges[1] = Bridge7
+	bridges[2] = Bridge8
+
+	completeChannel := make(chan bool)
+
+	context := context.Background()
+
+	request := &Request{
+		Tasks:            tasks,
+		Bridges:          bridges,
+		Responses:        nil,
+		CompletedChannel: completeChannel,
+		Ctx:              context,
+	}
+
+	b.PostJob(request)
+
+	<-request.CompletedChannel
+
+	r1, _ := request.GetResponse(0)
+	r2, _ := request.GetResponse(1)
+	r3, _ := request.GetResponse(2)
+	r4, _ := request.GetResponse(3)
+
+	fmt.Println(r1, r2, r3, r4)
+
+	if r3.Error.Error() != "Test Error" || r4.Error.Error() != "Test Error" {
+		t.Fail()
+	}
+
 }
 
-func Bridge2(interface{}) BridgeConnection {
-	return make(chan interface{})
+func Bridge1(interface{}) *BridgeConnection {
+	return &BridgeConnection{}
 }
 
-func Bridge3(interface{}) BridgeConnection {
-	return make(chan interface{})
+func Bridge2(interface{}) *BridgeConnection {
+	return &BridgeConnection{}
 }
 
-func Bridge4(interface{}) BridgeConnection {
-	response := make(chan interface{}, 3)
-	response <- "1"
-	response <- 2
-	response <- 3.0
-	return response
+func Bridge3(interface{}) *BridgeConnection {
+	return &BridgeConnection{}
 }
 
-func Bridge5(interface{}) BridgeConnection {
-	response := make(chan interface{}, 2)
-	response <- "1"
-	response <- "2"
-	return response
+func Bridge4(interface{}) *BridgeConnection {
+	return &BridgeConnection{
+		Data:  []interface{}{"1", 2, 3.0},
+		Error: nil,
+	}
 }
 
-func Task1(BridgeConnection) *FutureTaskResponse {
+func Bridge5(interface{}) *BridgeConnection {
+	return &BridgeConnection{
+		Data:  []interface{}{"1", "2"},
+		Error: nil,
+	}
+}
+
+func Bridge6(interface{}) *BridgeConnection {
+	return &BridgeConnection{
+		Data:  []interface{}{"1", 2, 3.0},
+		Error: nil,
+	}
+}
+
+func Bridge7(interface{}) *BridgeConnection {
+	return &BridgeConnection{
+		Data:  []interface{}{"1", "2"},
+		Error: errors.New("Test Error"),
+	}
+}
+
+func Bridge8(interface{}) *BridgeConnection {
+	return &BridgeConnection{
+		Data:  []interface{}{"1", "2"},
+		Error: nil,
+	}
+}
+
+func Task1(*BridgeConnection) *FutureTaskResponse {
 	fmt.Print("Task 1-->")
 	return &FutureTaskResponse{
 		ResponseCode: 404,
@@ -334,7 +397,7 @@ func Task1(BridgeConnection) *FutureTaskResponse {
 	}
 }
 
-func Task2(BridgeConnection) *FutureTaskResponse {
+func Task2(*BridgeConnection) *FutureTaskResponse {
 
 	fmt.Println("Task 2-->")
 	return &FutureTaskResponse{
@@ -344,7 +407,7 @@ func Task2(BridgeConnection) *FutureTaskResponse {
 	}
 }
 
-func Task3(BridgeConnection) *FutureTaskResponse {
+func Task3(*BridgeConnection) *FutureTaskResponse {
 	fmt.Print("Task 3-->")
 	return &FutureTaskResponse{
 		ResponseCode: 200,
@@ -353,7 +416,7 @@ func Task3(BridgeConnection) *FutureTaskResponse {
 	}
 }
 
-func Task4(BridgeConnection) *FutureTaskResponse {
+func Task4(*BridgeConnection) *FutureTaskResponse {
 	fmt.Println("Task 4-->")
 	return &FutureTaskResponse{
 		ResponseCode: 404,
@@ -362,11 +425,11 @@ func Task4(BridgeConnection) *FutureTaskResponse {
 	}
 }
 
-func Task5(bconn BridgeConnection) *FutureTaskResponse {
+func Task5(bconn *BridgeConnection) *FutureTaskResponse {
 	fmt.Print("Task 5-->")
-	d1 := (<-bconn).(string)
-	d2 := (<-bconn).(int)
-	d3 := (<-bconn).(float64)
+	d1 := bconn.Data[0].(string)
+	d2 := bconn.Data[1].(int)
+	d3 := bconn.Data[2].(float64)
 	return &FutureTaskResponse{
 		ResponseCode: 200,
 		Data:         []interface{}{d1, d2, d3},
@@ -374,10 +437,10 @@ func Task5(bconn BridgeConnection) *FutureTaskResponse {
 	}
 }
 
-func Task6(bconn BridgeConnection) *FutureTaskResponse {
+func Task6(bconn *BridgeConnection) *FutureTaskResponse {
 	fmt.Println("Task 6-->")
-	d1 := (<-bconn).(string)
-	d2 := (<-bconn).(string)
+	d1 := bconn.Data[0].(string)
+	d2 := bconn.Data[1].(string)
 	return &FutureTaskResponse{
 		ResponseCode: 200,
 		Data:         []interface{}{d1, d2},
@@ -385,7 +448,7 @@ func Task6(bconn BridgeConnection) *FutureTaskResponse {
 	}
 }
 
-func Task7(BridgeConnection) *FutureTaskResponse {
+func Task7(*BridgeConnection) *FutureTaskResponse {
 	fmt.Print("Task 7-->")
 	time.Sleep(time.Duration(5) * time.Second)
 	return &FutureTaskResponse{

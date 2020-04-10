@@ -26,17 +26,20 @@ var EMPTY_CALLBACK_RESPONSE = &FutureTaskResponse{
 
 // This is task which will be executed in future
 type FutureTask struct {
-	Callback   func(BridgeConnection) *FutureTaskResponse
+	Callback   func(*BridgeConnection) *FutureTaskResponse
 	Timeout    time.Duration
 	RetryCount int
 }
 
 // Its how two callbacks communicate with each other, this is a function which knows how to convert
 // one callback response to the next
-type Bridge func(interface{}) BridgeConnection
+type Bridge func(interface{}) *BridgeConnection
 
 // Its the data that is filled with the bridge data
-type BridgeConnection chan interface{}
+type BridgeConnection struct {
+	Data  []interface{}
+	Error error
+}
 
 // Request is the one that is sent to the *balancer* to be used to call concurrently
 type Request struct {
@@ -76,7 +79,7 @@ func (r *Request) GetOnlyResponse() (*Response, error) {
 	}
 }
 
-func NewFutureTask(callback func(BridgeConnection) *FutureTaskResponse) *FutureTask {
+func NewFutureTask(callback func(*BridgeConnection) *FutureTaskResponse) *FutureTask {
 	return &FutureTask{Callback: callback}
 }
 func (f *FutureTask) WithMilliSecondTimeout(t int) *FutureTask {

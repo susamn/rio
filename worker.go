@@ -43,7 +43,7 @@ func (w *Worker) Run() {
 					r.Responses = make([]*Response, 0, len(r.Tasks))
 
 					// The initial bridge, which is nil for the first call
-					var bridgeConnection BridgeConnection
+					var bridgeConnection *BridgeConnection
 
 					// Single request processing channel
 					ch := make(chan *Response)
@@ -102,9 +102,23 @@ func (w *Worker) Run() {
 									}
 									bridgeConnection = bridge(response.Data)
 
-									currentTask = r.Tasks[0]
-									currentTimer = time.NewTimer(currentTask.Timeout)
-									doTask(ch, currentTask, bridgeConnection)
+									if bridgeConnection.Error == nil {
+										currentTask = r.Tasks[0]
+										currentTimer = time.NewTimer(currentTask.Timeout)
+										doTask(ch, currentTask, bridgeConnection)
+									} else {
+										for i := 0; i < len(r.Tasks); i++ {
+											r.Responses = append(r.Responses, &Response{
+												ResponseTime: -1,
+												ResponseCode: -1,
+												Data:         nil,
+												Error:        bridgeConnection.Error,
+											})
+										}
+										w.done <- w
+										r.CompletedChannel <- true
+										return
+									}
 								}
 
 							}
@@ -119,7 +133,7 @@ func (w *Worker) Run() {
 	}()
 }
 
-func doTask(ch chan *Response, task *FutureTask, bridgeConnection BridgeConnection) {
+func doTask(ch chan *Response, task *FutureTask, bridgeConnection *BridgeConnection) {
 	go func() {
 		preTime := time.Now()
 		// The actual network call happens here
