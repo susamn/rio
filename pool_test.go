@@ -37,7 +37,7 @@ func TestPool(t *testing.T) {
 	}
 	item := heap.Pop(&poo).(*Worker)
 
-	if item.pending != 5 {
+	if item.pending != 0 {
 		t.Fail()
 	}
 }
