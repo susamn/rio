@@ -18,7 +18,7 @@ func TestPool(t *testing.T) {
 	i := 0
 	for p, _ := range requests {
 		w := &Worker{
-			pending: p + 10,
+			pending: p,
 			index:   i,
 		}
 		poo[i] = w

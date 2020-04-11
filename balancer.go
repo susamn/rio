@@ -9,6 +9,7 @@ import (
 
 type Balancer struct {
 	pool         Pool
+	ws           []*Worker
 	jobChannel   chan *Request
 	done         chan *Worker
 	queuedItems  int
@@ -22,14 +23,19 @@ func GetBalancer(workerCount, taskPerWorker int) *Balancer {
 		closeChannel: make(chan chan bool),
 	}
 	p := make([]*Worker, workerCount)
+	wx := make([]*Worker, workerCount)
 	for i := 0; i < workerCount; i++ {
 		w := &Worker{
-			requests: make(chan *Request, taskPerWorker),
-			pending:  0,
-			index:    i,
-			Name:     fmt.Sprintf("Worker-%d", i),
-			done:     b.done}
+			requests:     make(chan *Request, taskPerWorker),
+			pending:      0,
+			index:        i,
+			Name:         fmt.Sprintf("Worker-%d", i),
+			done:         b.done,
+			closeChannel: make(chan chan bool),
+		}
 		p[i] = w
+		wx[i] = w
+		b.ws = wx
 		w.Run()
 	}
 	b.pool = p
@@ -59,6 +65,12 @@ func (b *Balancer) balance() {
 				if b.queuedItems > 0 {
 					time.AfterFunc(1*time.Second, func() { b.closeChannel <- cb })
 				} else {
+					for _, w := range b.pool {
+						c := make(chan bool)
+						w.Close(c)
+						<-c
+						fmt.Println("")
+					}
 					cb <- true
 					log.Println("Closing balancer")
 					return
@@ -75,11 +87,10 @@ func (b *Balancer) dispatch(req *Request) {
 	w.DoWork(req)
 	w.pending++
 	heap.Push(&b.pool, w)
-	log.Println()
 }
 
 func (b *Balancer) completed(w *Worker) {
 	w.pending--
-	heap.Remove(&b.pool, w.index)
-	heap.Push(&b.pool, w)
+	worker := heap.Remove(&b.pool, w.index)
+	heap.Push(&b.pool, worker)
 }

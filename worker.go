@@ -6,50 +6,62 @@ import (
 )
 
 type Worker struct {
-	Name     string
-	requests chan *Request
-	pending  int
-	index    int
-	done     chan *Worker
+	Name         string
+	requests     chan *Request
+	pending      int
+	index        int
+	done         chan *Worker
+	closeChannel chan chan bool
 }
 
 func (w *Worker) DoWork(request *Request) {
 	w.requests <- request
 }
 
-func (w *Worker) Close() {
-
+func (w *Worker) Close(cb chan bool) {
+	w.closeChannel <- cb
 }
 
 func (w *Worker) Run() {
 	go func() {
 		for {
-			r := <-w.requests
-
-			// No task to work on
-			if len(r.Tasks) == 0 {
+			select {
+			case callback := <-w.closeChannel:
+				close(w.closeChannel)
+				close(w.requests)
+				log.Println("Closing worker : ", w.Name)
+				callback <- true
 				return
+
+			case r := <-w.requests:
+
+				// No task to work on
+				if len(r.Tasks) == 0 {
+					return
+				}
+				if len(r.Tasks) > 1 && len(r.Bridges) != len(r.Tasks)-1 {
+					log.Println("If you are specifying multiple tasks, n, then the you must provide (n-1) bridges")
+					log.Printf("Provided task count : %d, bridge count : %d. Expected bridge count : %d\n", len(r.Tasks), len(r.Bridges), len(r.Tasks)-1)
+					return
+				}
+
+				// Create a slice of response with equal size of the number of requests
+				r.Responses = make([]*Response, 0, len(r.Tasks))
+
+				// The initial bridge, which is nil for the first call
+				var bridgeConnection *BridgeConnection
+
+				// Single request processing channel
+				ch := make(chan *Response)
+
+				currentTask := r.Tasks[0]
+				currentTimer := time.NewTimer(currentTask.Timeout)
+				doTask(ch, currentTask, bridgeConnection)
+
+				w.loop(currentTimer, r, bridgeConnection, currentTask, ch)
+
 			}
-			if len(r.Tasks) > 1 && len(r.Bridges) != len(r.Tasks)-1 {
-				log.Println("If you are specifying multiple tasks, n, then the you must provide (n-1) bridges")
-				log.Printf("Provided task count : %d, bridge count : %d. Expected bridge count : %d\n", len(r.Tasks), len(r.Bridges), len(r.Tasks)-1)
-				return
-			}
 
-			// Create a slice of response with equal size of the number of requests
-			r.Responses = make([]*Response, 0, len(r.Tasks))
-
-			// The initial bridge, which is nil for the first call
-			var bridgeConnection *BridgeConnection
-
-			// Single request processing channel
-			ch := make(chan *Response)
-
-			currentTask := r.Tasks[0]
-			currentTimer := time.NewTimer(currentTask.Timeout)
-			doTask(ch, currentTask, bridgeConnection)
-
-			w.loop(currentTimer, r, bridgeConnection, currentTask, ch)
 		}
 	}()
 }

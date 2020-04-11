@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"testing"
 	"time"
 )
 
 func BenchmarkBalancerSingleTask(b *testing.B) {
 
-	balancer := GetBalancer(1, 1)
+	balancer := GetBalancer(5, 3)
 	for i := 0; i < b.N; i++ {
 
 		var tasks = make([]*FutureTask, 1)
@@ -35,6 +36,10 @@ func BenchmarkBalancerSingleTask(b *testing.B) {
 		fmt.Println(request.Responses[0])
 
 	}
+	closeChannel := make(chan bool)
+	balancer.Close(closeChannel)
+	<-closeChannel
+
 }
 
 func BenchmarkMultipleChainedTask(b *testing.B) {
@@ -106,9 +111,13 @@ func TestWithSingleTaskWithRetry(t *testing.T) {
 
 	fmt.Println(request.Responses[0])
 
+	fmt.Println("Goroutines count : ", runtime.NumGoroutine())
+
 	closeChannel := make(chan bool)
 	balancer.Close(closeChannel)
 	<-closeChannel
+
+	fmt.Println("Goroutines count : ", runtime.NumGoroutine())
 
 }
 
@@ -323,7 +332,7 @@ func TestWithMultipleChainedTaskAndBridgeData(t *testing.T) {
 }
 
 func TestWithMultipleChainedTaskAndBridgeDataFromDifferentGoroutines(t *testing.T) {
-	balancer := GetBalancer(100, 100)
+	balancer := GetBalancer(10, 100)
 
 	for i := 0; i < 100; i++ {
 		go func() {
