@@ -43,8 +43,13 @@ func GetBalancer(workerCount, taskPerWorker int) *Balancer {
 	return b
 }
 
-func (b *Balancer) PostJob(job *Request) {
-	b.jobChannel <- job
+func (b *Balancer) PostJob(job *Request) error {
+	err := job.Validate()
+	if err == nil {
+		b.jobChannel <- job
+		return nil
+	}
+	return err
 }
 
 func (b *Balancer) Close(cb chan bool) {

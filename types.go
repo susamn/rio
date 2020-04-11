@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -105,6 +106,23 @@ func BuildSingleRequest(context context.Context, task *FutureTask) *Request {
 	tasks := make([]*FutureTask, 1)
 	tasks = append(tasks, task)
 	return &Request{Ctx: context, Tasks: tasks}
+}
+
+func (r Request) Validate() error {
+	if r.CompletedChannel == nil {
+		return errors.New("The request CompletedChannel is nil")
+	}
+	if r.Tasks == nil || len(r.Tasks) == 0 {
+		return errors.New("Please provide some tasks to process, the task list is empty")
+	}
+	if len(r.Tasks) > 1 && len(r.Bridges) != len(r.Tasks)-1 {
+		log.Println("If you are specifying multiple tasks, n, then the you must provide (n-1) bridges")
+		return errors.New(fmt.Sprintf("Provided task count : %d, bridge count : %d. Expected "+
+			"bridge count : %d\n", len(r.Tasks), len(r.Bridges), len(r.Tasks)-1))
+	}
+
+	return nil
+
 }
 
 func (r *Request) FollowedBy(bridge Bridge, task *FutureTask) *Request {

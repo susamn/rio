@@ -35,16 +35,6 @@ func (w *Worker) Run() {
 
 			case r := <-w.requests:
 
-				// No task to work on
-				if len(r.Tasks) == 0 {
-					return
-				}
-				if len(r.Tasks) > 1 && len(r.Bridges) != len(r.Tasks)-1 {
-					log.Println("If you are specifying multiple tasks, n, then the you must provide (n-1) bridges")
-					log.Printf("Provided task count : %d, bridge count : %d. Expected bridge count : %d\n", len(r.Tasks), len(r.Bridges), len(r.Tasks)-1)
-					return
-				}
-
 				// Create a slice of response with equal size of the number of requests
 				r.Responses = make([]*Response, 0, len(r.Tasks))
 

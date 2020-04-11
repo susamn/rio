@@ -428,6 +428,94 @@ func TestWithMultipleChainedTaskAndBridgeDataSecondCallFailed(t *testing.T) {
 
 }
 
+// Negative Test Cases
+func TestWithInsufficientBridges(t *testing.T) {
+	balancer := GetBalancer(10, 2)
+
+	var tasks = make([]*FutureTask, 4)
+	tasks[0] = &FutureTask{Callback: Task1, Timeout: time.Duration(100) * time.Second, RetryCount: 2}
+	tasks[1] = &FutureTask{Callback: Task2, Timeout: time.Duration(100) * time.Second, RetryCount: 0}
+	tasks[2] = &FutureTask{Callback: Task3, Timeout: time.Duration(100) * time.Second, RetryCount: 1}
+	tasks[3] = &FutureTask{Callback: Task4, Timeout: time.Duration(100) * time.Second}
+
+	var bridges = make([]Bridge, 2)
+	bridges[0] = Bridge1
+	bridges[1] = Bridge2
+
+	completeChannel := make(chan bool)
+
+	ctx := context.Background()
+
+	request := &Request{
+		Tasks:            tasks,
+		Bridges:          bridges,
+		Responses:        nil,
+		CompletedChannel: completeChannel,
+		Ctx:              ctx,
+	}
+
+	err := balancer.PostJob(request)
+	fmt.Println(err.Error())
+
+	if err == nil {
+		t.Fail()
+	}
+
+	closeChannel := make(chan bool)
+	balancer.Close(closeChannel)
+	<-closeChannel
+
+}
+
+func TestWithEmptyTasks(t *testing.T) {
+	balancer := GetBalancer(1, 2)
+
+	completeChannel := make(chan bool)
+	request := &Request{
+		Tasks:            []*FutureTask{},
+		Bridges:          nil,
+		Responses:        nil,
+		CompletedChannel: completeChannel,
+		Ctx:              nil,
+	}
+
+	err := balancer.PostJob(request)
+	fmt.Println(err.Error())
+
+	if err == nil {
+		t.Fail()
+	}
+
+	closeChannel := make(chan bool)
+	balancer.Close(closeChannel)
+	<-closeChannel
+
+}
+
+func TestWithEmptyCompletedChannel(t *testing.T) {
+	balancer := GetBalancer(1, 2)
+
+	request := &Request{
+		Tasks:            []*FutureTask{},
+		Bridges:          nil,
+		Responses:        nil,
+		CompletedChannel: nil,
+		Ctx:              nil,
+	}
+
+	err := balancer.PostJob(request)
+	fmt.Println(err.Error())
+
+	if err == nil {
+		t.Fail()
+	}
+
+	closeChannel := make(chan bool)
+	balancer.Close(closeChannel)
+	<-closeChannel
+
+}
+
 func Bridge1(interface{}) *BridgeConnection {
 	return &BridgeConnection{}
 }
