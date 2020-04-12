@@ -11,7 +11,7 @@
 
 # Introduction
 
-![img](https://github.com/susamn/rio/workflows/Go/badge.svg) [![img](https://codecov.io/gh/susamn/rio/branch/master/graph/badge.svg)](https://codecov.io/gh/susamn/rio)
+![img](https://github.com/susamn/rio/workflows/Go/badge.svg) [![img](https://codecov.io/gh/susamn/rio/branch/master/graph/badge.svg)](https://codecov.io/gh/susamn/rio) [![Go Report Card](https://goreportcard.com/badge/github.com/susamn/rio)](https://goreportcard.com/report/github.com/susamn/rio)
 
 
 <a id="org64d7944"></a>
