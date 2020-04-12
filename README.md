@@ -11,9 +11,10 @@
 
 # Introduction
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/d833f224d9974475a011cb7191cd19e4)](https://app.codacy.com/manual/susamn/rio?utm_source=github.com&utm_medium=referral&utm_content=susamn/rio&utm_campaign=Badge_Grade_Dashboard)
+
 ![img](https://github.com/susamn/rio/workflows/Go/badge.svg) [![img](https://codecov.io/gh/susamn/rio/branch/master/graph/badge.svg)](https://codecov.io/gh/susamn/rio) [![Go Report Card](https://goreportcard.com/badge/github.com/susamn/rio)](https://goreportcard.com/report/github.com/susamn/rio)
 
+[![Code Inspector Badge](https://www.code-inspector.com/project/5768/status/svg)](https://www.code-inspector.com/project/5768/status/svg) [![Code Inspector Report Card](https://www.code-inspector.com/project/5768/score/svg)](https://www.code-inspector.com/project/5768/score/svg) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/d833f224d9974475a011cb7191cd19e4)](https://app.codacy.com/manual/susamn/rio?utm_source=github.com&utm_medium=referral&utm_content=susamn/rio&utm_campaign=Badge_Grade_Dashboard)
 
 <a id="org64d7944"></a>
 
