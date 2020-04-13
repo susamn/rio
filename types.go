@@ -103,7 +103,7 @@ func BuildRequests(context context.Context, task *FutureTask, size int) *Request
 }
 
 func BuildSingleRequest(context context.Context, task *FutureTask) *Request {
-	tasks := make([]*FutureTask, 1)
+	tasks := make([]*FutureTask, 0, 1)
 	tasks = append(tasks, task)
 	return &Request{Ctx: context, Tasks: tasks}
 }

@@ -9,7 +9,6 @@ import (
 
 type Balancer struct {
 	pool         Pool
-	ws           []*Worker
 	jobChannel   chan *Request
 	done         chan *Worker
 	queuedItems  int
@@ -23,7 +22,6 @@ func GetBalancer(workerCount, taskPerWorker int) *Balancer {
 		closeChannel: make(chan chan bool),
 	}
 	p := make([]*Worker, workerCount)
-	wx := make([]*Worker, workerCount)
 	for i := 0; i < workerCount; i++ {
 		w := &Worker{
 			requests:     make(chan *Request, taskPerWorker),
@@ -34,8 +32,6 @@ func GetBalancer(workerCount, taskPerWorker int) *Balancer {
 			closeChannel: make(chan chan bool),
 		}
 		p[i] = w
-		wx[i] = w
-		b.ws = wx
 		w.Run()
 	}
 	b.pool = p
