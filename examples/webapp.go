@@ -23,7 +23,7 @@ func backEndCall2(name, locationId string) (streetAddress string) {
 	return "Route 66"
 }
 
-func GetNameById(id string) func(*rio.BridgeConnection) *rio.FutureTaskResponse {
+func GetNameById(id string) rio.Callback {
 	return func(bconn *rio.BridgeConnection) *rio.FutureTaskResponse {
 		response := backEndCall1(id)
 		return &rio.FutureTaskResponse{
@@ -34,7 +34,7 @@ func GetNameById(id string) func(*rio.BridgeConnection) *rio.FutureTaskResponse 
 	}
 }
 
-func GetStreetAddressByNameAndLocationId(name, locationId string) func(*rio.BridgeConnection) *rio.FutureTaskResponse {
+func GetStreetAddressByNameAndLocationId(name, locationId string) rio.Callback {
 	return func(bconn *rio.BridgeConnection) *rio.FutureTaskResponse {
 		var innerName string
 

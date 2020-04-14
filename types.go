@@ -27,7 +27,7 @@ var EMPTY_CALLBACK_RESPONSE = &FutureTaskResponse{
 
 // This is task which will be executed in future
 type FutureTask struct {
-	Callback   func(*BridgeConnection) *FutureTaskResponse
+	Callback   Callback
 	Timeout    time.Duration
 	RetryCount int
 }
@@ -35,6 +35,9 @@ type FutureTask struct {
 // Its how two callbacks communicate with each other, this is a function which knows how to convert
 // one callback response to the next
 type Bridge func(interface{}) *BridgeConnection
+
+// Its the type that will be used by the consumers to create the service closures
+type Callback func(*BridgeConnection) *FutureTaskResponse
 
 // Its the data that is filled with the bridge data
 type BridgeConnection struct {
@@ -80,7 +83,7 @@ func (r *Request) GetOnlyResponse() (*Response, error) {
 	}
 }
 
-func NewFutureTask(callback func(*BridgeConnection) *FutureTaskResponse) *FutureTask {
+func NewFutureTask(callback Callback) *FutureTask {
 	return &FutureTask{Callback: callback}
 }
 func (f *FutureTask) WithMilliSecondTimeout(t int) *FutureTask {
@@ -105,7 +108,7 @@ func BuildRequests(context context.Context, task *FutureTask, size int) *Request
 func BuildSingleRequest(context context.Context, task *FutureTask) *Request {
 	tasks := make([]*FutureTask, 0, 1)
 	tasks = append(tasks, task)
-	return &Request{Ctx: context, Tasks: tasks}
+	return &Request{Ctx: context, Tasks: tasks, CompletedChannel: make(chan bool)}
 }
 
 func (r Request) Validate() error {
