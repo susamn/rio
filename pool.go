@@ -1,5 +1,6 @@
 package rio
 
+// The pool is a list of workers. The pool is also a priority queue.
 type Pool []*Worker
 
 func (p Pool) Len() int {

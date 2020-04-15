@@ -5,23 +5,40 @@ import (
 	"time"
 )
 
+// The worker struct, it has all the attributes that is needed by a worker to do its thing
 type Worker struct {
-	Name         string
-	requests     chan *Request
-	pending      int
-	index        int
-	done         chan *Worker
+
+	// The name of the worker. It is assigned by the balancer when it is created.
+	Name string
+
+	// The request channel of the worker. The balancer sends the requests in this channel
+	requests chan *Request
+
+	// The is the count that tells how many requests are still in buffer for the worker to work on
+	pending int
+
+	// The index value is used by the priority queue to move it back and forth in the heap
+	index int
+
+	// Its the copy of the balancer done channel, passed to all the worker
+	done chan *Worker
+
+	// Its the close channel to close a worker. Its used by the balancer only, hence unexported
 	closeChannel chan chan bool
 }
 
+// The balancer calls the method to queue a new request to the worker
 func (w *Worker) DoWork(request *Request) {
 	w.requests <- request
 }
 
+// The close method, when called closes a worker
 func (w *Worker) Close(cb chan bool) {
 	w.closeChannel <- cb
 }
 
+// The run method which actually processes the requests. Once a worker is created, this method is also called by the
+// balancer
 func (w *Worker) Run() {
 	go func() {
 		for {
@@ -56,6 +73,7 @@ func (w *Worker) Run() {
 	}()
 }
 
+// This method handles the individual tasks and its timeout and the request context
 func (w *Worker) loop(currentTimer *time.Timer, r *Request, bridgeConnection *BridgeConnection, currentTask *FutureTask, ch chan *Response) {
 	for {
 		select {
@@ -132,11 +150,23 @@ func (w *Worker) loop(currentTimer *time.Timer, r *Request, bridgeConnection *Br
 	}
 }
 
+// This method handles the execution of the actual network call
 func doTask(ch chan *Response, task *FutureTask, bridgeConnection *BridgeConnection) {
+	// The actual network call happens here
 	go func() {
+		var futureTaskResponse *FutureTaskResponse
 		preTime := time.Now()
-		// The actual network call happens here
-		futureTaskResponse := task.Callback(bridgeConnection)
+		if task.ReplicaCount > 1 {
+			replicaChannel := make(chan *FutureTaskResponse)
+			for i := 0; i < task.RetryCount; i++ {
+				go func() { replicaChannel <- task.Callback(bridgeConnection) }()
+			}
+			futureTaskResponse = <-replicaChannel
+			close(replicaChannel)
+		} else {
+			futureTaskResponse = task.Callback(bridgeConnection)
+		}
+
 		ch <- &Response{
 			ResponseTime: time.Since(preTime),
 			ResponseCode: futureTaskResponse.ResponseCode,
