@@ -49,7 +49,6 @@ type BridgeConnection struct {
 // Request is the one that is sent to the *balancer* to be used to call concurrently
 type Request struct {
 	Tasks            []*FutureTask
-	TaskCount        int
 	Bridges          []Bridge
 	Responses        []*Response
 	CompletedChannel chan bool
@@ -122,14 +121,7 @@ func (f *FutureTask) WithReplica(c int) *FutureTask {
 
 // Use this method to build a request instance, which is sent on the balancer to be processed. Use this variant when
 // there is a job chaining required and multiple tasks are involved, one after another.
-func BuildRequests(context context.Context, task *FutureTask, size int) *Request {
-	tasks := make([]*FutureTask, 0, size)
-	tasks = append(tasks, task)
-	return &Request{Ctx: context, Tasks: tasks, TaskCount: size, CompletedChannel: make(chan bool)}
-}
-
-// Use this method to create a request instance with only 1 task.
-func BuildSingleRequest(context context.Context, task *FutureTask) *Request {
+func BuildRequests(context context.Context, task *FutureTask) *Request {
 	tasks := make([]*FutureTask, 0, 1)
 	tasks = append(tasks, task)
 	return &Request{Ctx: context, Tasks: tasks, CompletedChannel: make(chan bool)}
@@ -142,7 +134,10 @@ func (r Request) Validate() error {
 		return errors.New("The request CompletedChannel is nil")
 	}
 	if r.Tasks == nil || len(r.Tasks) == 0 {
-		return errors.New("Please provide some tasks to process, the task list is empty")
+		return errors.New("please provide some tasks to process, the task list is empty")
+	}
+	if length := len(r.Tasks); length > 1 && length != len(r.Bridges)+1 {
+		return errors.New("for a followed by construct, there should be n requests and (n-1) bridges")
 	}
 	if len(r.Tasks) > 1 && len(r.Bridges) != len(r.Tasks)-1 {
 		log.Println("If you are specifying multiple tasks, n, then the you must provide (n-1) bridges")
@@ -155,11 +150,12 @@ func (r Request) Validate() error {
 // This construct is used to create task chaining. If task2 depends on task1 in terms of data and the execution is to
 // happen like task1-->task2, then use this method to chain them together by means of a Bridge type
 func (r *Request) FollowedBy(bridge Bridge, task *FutureTask) *Request {
-	if r.TaskCount < 2 {
-		panic("TaskCount cannot be < 2 for a FollowedBy construct")
+	if bridge == nil || task == nil {
+		log.Println("Error : Please provide the bridges and tasks properly")
+		return nil
 	}
 	if r.Bridges == nil {
-		r.Bridges = make([]Bridge, 0, r.TaskCount-1)
+		r.Bridges = make([]Bridge, 0, 1)
 	}
 	r.Bridges = append(r.Bridges, bridge)
 	r.Tasks = append(r.Tasks, task)
