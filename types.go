@@ -27,6 +27,7 @@ var EMPTY_CALLBACK_RESPONSE = &FutureTaskResponse{
 
 // This is task which will be executed in future
 type FutureTask struct {
+	Name         string
 	Callback     Callback
 	Timeout      time.Duration
 	RetryCount   int
@@ -90,6 +91,11 @@ func (r *Request) GetOnlyResponse() (*Response, error) {
 // Use this method to create a new task. It takes a callback in the form of a closure.
 func NewFutureTask(callback Callback) *FutureTask {
 	return &FutureTask{Callback: callback}
+}
+
+// Use this method to create a new task. It takes a callback in the form of a closure.
+func NewNamedFutureTask(name string, callback Callback) *FutureTask {
+	return &FutureTask{Callback: callback, Name: name}
 }
 
 // Add timeout for the task in the form of milliseconds
